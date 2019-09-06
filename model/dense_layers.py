@@ -26,11 +26,13 @@ class Generator(nn.Module):
     def __init__(self, hidden_size: int, embedding_dim: int):
         super().__init__()
         self.context_nn = nn.Linear(hidden_size, 1, bias=False)
-        self.state_pred_nn = nn.Linear(hidden_size + embedding_dim, 1, bias=True) 
+        self.state_pred_nn = nn.Linear(hidden_size + embedding_dim, 1,
+                                       bias=True)
 
-    def forward(self, agentwise_context, state, predicted):
+    def forward(self, agentwise_context, state, predicted) -> torch.Tensor:
         context_importance = self.context_nn(agentwise_context).squeeze(-1)
         # [bsz, tgt_len, n_agents]
-        state_pred_importance = self.state_pred_nn(torch.cat((state, predicted), dim=-1))
+        state_pred_importance = self.state_pred_nn(torch.cat((state, predicted),
+                                                             dim=-1))
         # [bsz, tgt_len, 1]
         return torch.sigmoid(context_importance + state_pred_importance)

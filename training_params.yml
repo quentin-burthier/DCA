@@ -1,0 +1,22 @@
+xp_name: debug
+
+debug: True
+
+hparams:
+  n_agents: 5
+  embedding_dim: 200
+  hidden_size: 128
+  vocab_size: 50_000
+  n_contextual_layers: 2
+
+optimizer:
+  lr: 0.001
+
+training:
+  loaders:
+    batch_size: 64
+    num_workers: 4
+  trainer:
+    gpus: [0]
+    max_nb_epochs: 10
+    val_check_interval: 0.1

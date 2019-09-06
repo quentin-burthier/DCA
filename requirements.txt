@@ -1,0 +1,4 @@
+pytorch>=1.2.0
+gensim
+pyrouge
+PyYAML

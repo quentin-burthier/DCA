@@ -24,14 +24,14 @@ class MultiAgentsSummarizer(nn.Module):
         self.multi_agt_encoder = multi_agt_encoder
         self.decoder = decoder
 
-    def forward(self, article, seq_lengths, prev_input):
+    def forward(self, article, prev_input):
 
         _, bsz, n_agents, _ = article.shape
         tgt_len = prev_input.shape[0]
 
         embedded_article = self.embedding(article)
 
-        encoded_seq, state = self.multi_agt_encoder(embedded_article, seq_lengths)
+        encoded_seq, state = self.multi_agt_encoder(embedded_article)
 
         vocab_probs, generation_probs, agentwise_attn, agent_attn = self.decoder(
             prev_input=prev_input,
@@ -97,10 +97,10 @@ class MultiAgentsEncoder(nn.Module):
         self.mask_matrix = torch.ones(self.n_agents, self.n_agents, dtype=torch.uint8)
         self.mask_matrix -= torch.eye(self.n_agents, dtype=torch.uint8)
 
-    def forward(self, article: PackedSequence, seq_lenghts):
+    def forward(self, article: PackedSequence):
 
         # Local encoding of each article
-        prev_layer_enc, prev_hs = self.local_layer(article, seq_lenghts)
+        (prev_layer_enc, seq_lenghts), prev_hs = self.local_layer(article)
         # [src_len, bsz*n_agents, 2*hsz]
         # [bsz*n_agents, 2*hsz]
         prev_layer_enc = self.bidir_hs_proj(prev_layer_enc) # [src_len, bsz*n_agents, hsz]
@@ -128,7 +128,9 @@ class MultiAgentsEncoder(nn.Module):
             next_layer_in = self.msg_projection(prev_layer_enc, message)
             # [src_len, bsz*n_agents, hsz]
 
-            prev_layer_enc, prev_hs = contextual_layer(next_layer_in, seq_lenghts)
+            next_layer_in = pack_padded_sequence(next_layer_in, seq_lenghts,
+                                                 enforce_sorted=False)
+            prev_layer_enc, prev_hs = contextual_layer(next_layer_in)
 
         last_h_of_1st_agt = prev_hs.view(bsz, self.n_agents, hsz)[:, 0, :]  # [bsz, hsz]
         prev_layer_enc = pad_packed_sequence(prev_layer_enc)  # [bsz*n_agents, hsz]

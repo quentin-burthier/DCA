@@ -1,27 +1,28 @@
 """Decoder."""
 
+import torch
 import torch.nn as nn
-
+from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
 
 class LSTMLayer(nn.Module):
-    """TODO Single layer LSTM.
+    """Single layer LSTM.
 
     Args:
         input_size (int): dimension of input sequence elements
         hidden_size (int): dimension of the LSTM hidden size
 
     Input:
-        input_seq (Tensor): batch of articles, split by n_agents paragraphs
-        seq_lenghts (LongTensor): lenghts of the paragraphs
+        input_seq (PackedSequence): shifted gold summaries
 
     Output:
-        encoded_seq (Tensor)
-        message (Tensor[bsz, 2*hsz])
+        dec_out (Tensor[tgt_len, bsz, hsz])
     """
     def __init__(self, input_size: int, hidden_size: int):
+        super().__init__()
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
                             num_layers=1, bidirectional=False)
 
-    def forward(self, input_seq, states: tuple):
+    def forward(self, input_seq: PackedSequence, states: tuple) -> torch.Tensor:
         dec_out, _ = self.lstm(input_seq, states)
+        dec_out, _ = pad_packed_sequence(dec_out)
         return dec_out
