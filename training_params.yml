@@ -4,7 +4,7 @@ debug: True
 
 hparams:
   n_agents: 5
-  embedding_dim: 200
+  embedding_dim: 128
   hidden_size: 128
   vocab_size: 50_000
   n_contextual_layers: 2

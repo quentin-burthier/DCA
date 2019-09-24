@@ -1,11 +1,17 @@
 """Routine loading every block needed to train a model."""
 
-from typing import Tuple
+from typing import Tuple, Dict
 
+import os
+from os.path import join
+import pickle
 import yaml
 
 import torch
 from torch.optim import SGD, Adam
+
+from data.token_indexer import TokenIndexer
+from utils.vocab import make_vocab, load_embedding
 
 # from trainer import Trainer
 
@@ -91,17 +97,33 @@ def set_device(use_gpu: bool) -> Tuple[torch.device, bool]:
     return device, pin_memory
 
 
-def get_optimizer(model, optimizer_name: str, optim_params: dict) -> torch.optim.Optimizer:
-    """Gets the optimizer.
+# def get_optimizer(model, optimizer_name: str, optim_params: dict) -> torch.optim.Optimizer:
+#     """Gets the optimizer.
 
-    Args:
-        model (nn.Module): PyTorch model
-        optimizer_name (str): Optimizer (SGD, Adam...)
-        optim_params (dict): Optimizer paramters. At least learning rate
-                             is required.
+#     Args:
+#         model (nn.Module): PyTorch model
+#         optimizer_name (str): Optimizer (SGD, Adam...)
+#         optim_params (dict): Optimizer paramters. At least learning rate
+#                              is required.
 
-    Returns:
-        torch.optim.Optimizer
-    """
-    optimizers = {"SGD": SGD, "Adam": Adam}
-    return optimizers[optimizer_name](model.parameters(), **optim_params)
+#     Returns:
+#         torch.optim.Optimizer
+#     """
+#     optimizers = {"SGD": SGD, "Adam": Adam}
+#     return optimizers[optimizer_name](model.parameters(), **optim_params)
+
+
+def get_embedders(vocab_size: int, embedding_dim: int,
+                  special_tokens: Dict[str, int]):
+
+    with open(join(os.environ["CNNDM_PATH"], 'vocab_cnt.pkl'), 'rb') as f:
+        word_count = pickle.load(f)
+
+    word2id, id2word = make_vocab(word_count, vocab_size, special_tokens)
+
+    w2v_path = join(os.environ["XP_PATH"],
+                    "word2vec", f"word2vec.{embedding_dim}d.226k.bin")
+
+    embedding, _ = load_embedding(id2word, word2id, w2v_path)
+
+    return TokenIndexer(word2id, special_tokens["<unk>"]), embedding

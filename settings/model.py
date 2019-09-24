@@ -1,5 +1,6 @@
 """Functions to build the model."""
 
+import torch
 import torch.nn as nn
 
 from model.multi_agents import MultiAgentsSummarizer, MultiAgentsEncoder, Decoder
@@ -9,10 +10,11 @@ from model.dense_layers import Generator
 from model.attention import AdditiveAttention
 
 def build_multi_agt_summarizer(n_agents: int, embedding_dim: int, vocab_size: int,
-                               hidden_size: int, n_contextual_layers: int):
+                               hidden_size: int, n_contextual_layers: int,
+                               embeddings: torch.Tensor):
     """Builds the Multi-Agents Summarizer."""
 
-    embedding_layer = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim)
+    embedding_layer = nn.Embedding.from_pretrained(embeddings)
 
     multi_agt_encoder = build_multi_agt_encoder(
         n_agents=n_agents, embedding_dim=embedding_dim,

@@ -17,17 +17,35 @@ from torch.utils.data import Dataset
 
 
 class CnnDmDataset(Dataset):
+    """CNN - Daily Mail Dataset
 
-    def __init__(self, split: str) -> None:
+    Args:
+        split (str): [description]
+
+    __getitem__:
+        article
+        abstract
+    """
+
+    def __init__(self, split: str, token_indexer) -> None:
+        """[summary]
+
+        Args:
+            split (str): [description]
+
+        Returns:
+            None: [description]
+        """
         assert split in ['train', 'val', 'test']
-        self._data_path = join(os.environ["CNN_DAILYMAIL_PATH"], split)
-        self._n_data = _count_data(self._data_path)
+        self._data_path = join(os.environ["CNNDM_PATH"], split)
+        self._n_data = count_data(self._data_path)
+        self.token_indexer = token_indexer
 
-    def __getitem__(self, i: int):
-        with open(join(self._data_path, f"{i}.json")) as f:
+    def __getitem__(self, index: int):
+        with open(join(self._data_path, f"{index}.json")) as f:
             sample = json.loads(f.read())
-        article: list = sample["article"]
-        abstract: list = sample["abstract"]
+        article: list = self.token_indexer(sample["article"])
+        abstract: list = self.token_indexer(sample["abstract"])
 
         return article, abstract
 
@@ -37,8 +55,8 @@ class CnnDmDataset(Dataset):
 
 class DCADataset(CnnDmDataset):
 
-    def __init__(self, split: str, n_agents: int):
-        super().__init__(split)
+    def __init__(self, split: str, n_agents: int, token_indexer):
+        super().__init__(split, token_indexer)
         self.n_agents = n_agents
 
     def __getitem__(self, i: int):
@@ -53,7 +71,7 @@ class DCADataset(CnnDmDataset):
         return [article[:n//3], article[n//3:2*n//3], article[2*n//3:]]
 
 
-def _count_data(path):
+def count_data(path):
     """ count number of data in the given path"""
     matcher = re.compile(r'[0-9]+\.json')
     match = lambda name: bool(matcher.match(name))

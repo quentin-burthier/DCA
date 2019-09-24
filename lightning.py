@@ -17,18 +17,19 @@ from data.collating import collate_by_packing
 from metrics.losses import sequence_nll
 # from metrics.scores import compute_rouge_n
 
-from settings import load_params, build_multi_agt_summarizer
+from settings import load_params, build_multi_agt_summarizer, get_embedders
 
 class SummarizerModule(pl.LightningModule):
     """PyTorch Lightning system.
     """
 
-    def __init__(self, summarizer, loaders_params: dict,
-                 optimizer_params: dict):
+    def __init__(self, summarizer, token_indexer,
+                 loaders_params: dict, optimizer_params: dict):
         super().__init__()
         self.summarizer = summarizer
         self._optimizer_params = optimizer_params
         self._loaders_params = loaders_params
+        self._token_indexer = token_indexer
 
     def forward(self, article, prev_input):
         return self.summarizer(article, prev_input)
@@ -52,20 +53,22 @@ class SummarizerModule(pl.LightningModule):
 
     @pl.data_loader
     def tng_dataloader(self):
-        train_set = DCADataset(split="train", n_agents=3)
+        train_set = DCADataset(split="train", n_agents=3,
+                               token_indexer=self._token_indexer)
         return DataLoader(train_set, **self._loaders_params, shuffle=True)
 
     @pl.data_loader
     def val_dataloader(self):
-        val_set = DCADataset(split="val", n_agents=3)
+        val_set = DCADataset(split="val", n_agents=3,
+                             token_indexer=self._token_indexer)
         return DataLoader(val_set, **self._loaders_params, shuffle=False)
 
 
-
 def teacher_forcing_training():
+    """Builds everything needed for the training, and launch the training."""
     xp_info, xp_params = load_params()
     xp_name, debug = xp_info
-    xp_path = join(os.environ["DCA_XP_PATH"], xp_name)
+    xp_path = join(os.environ["XP_PATH"], xp_name)
     hparams, optimizer_params, training_params = xp_params
 
     trainer_params = training_params["trainer"]
@@ -75,10 +78,26 @@ def teacher_forcing_training():
     loaders_params["collate_fn"] = collate_by_packing
     loaders_params["pin_memory"] = trainer_params["gpus"] is not None
 
-    dca_summarizer = build_multi_agt_summarizer(**hparams)
+    special_tokens = {
+        "<pad>": 0,
+        "<unk>": 1,
+        "<start>": 2,
+        "<end>": 3
+    }
+    token_indexer, embeddings = get_embedders(
+        vocab_size=hparams["vocab_size"],
+        embedding_dim=hparams["embedding_dim"],
+        special_tokens=special_tokens
+    )
+    dca_summarizer = build_multi_agt_summarizer(**hparams,
+                                                embeddings=embeddings)
 
     summarizer_module = SummarizerModule(
-        dca_summarizer, loaders_params, optimizer_params)
+        summarizer=dca_summarizer,
+        token_indexer=token_indexer,
+        loaders_params=loaders_params,
+        optimizer_params=optimizer_params
+    )
 
     trainer_params["experiment"] = Experiment(save_dir=xp_path, name=xp_name,
                                               debug=debug)
