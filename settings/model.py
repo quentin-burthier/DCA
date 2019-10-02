@@ -3,11 +3,16 @@
 import torch
 import torch.nn as nn
 
-from model.multi_agents import MultiAgentsSummarizer, MultiAgentsEncoder, Decoder
+from model.multi_agents import MultiAgentsSummarizer
+
+from model.multi_agents_encoder import MultiAgentsEncoder, MessageProjector
 from model.encoder_layers import BiLSTMLayer
+
+from model.decoder import Decoder, Generator
 from model.decoder_layers import LSTMLayer
-from model.dense_layers import Generator
+
 from model.attention import AdditiveAttention
+
 
 def build_multi_agt_summarizer(n_agents: int, embedding_dim: int, vocab_size: int,
                                hidden_size: int, n_contextual_layers: int,
@@ -34,13 +39,13 @@ def build_multi_agt_encoder(n_agents: int, embedding_dim: int, hidden_size: int,
          for _ in range(n_contextual_layers)]
     )
 
-    bidir_hs_proj = AdditiveAttention(hidden_size, bias=False)
-    msg_projection = AdditiveAttention(hidden_size, bias=False)
+    bidir_hs_proj = nn.Linear(2*hidden_size, hidden_size, bias=False)
+    msg_projector = MessageProjector(hidden_size)
 
     multi_agt_encoder = MultiAgentsEncoder(
         n_agents=n_agents, local_layer=local_layer,
         contextual_layers=contextual_layers,
-        bidir_hs_proj=bidir_hs_proj, msg_projection=msg_projection
+        bidir_hs_proj=bidir_hs_proj, msg_projector=msg_projector
     )
 
     return multi_agt_encoder

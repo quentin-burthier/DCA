@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from test_tube import Experiment
 
 from data.dataset import DCADataset
-from data.collating import collate_by_packing
+from data.collating import collate_by_padding
 from metrics.losses import sequence_nll
 # from metrics.scores import compute_rouge_n
 
@@ -31,12 +31,18 @@ class SummarizerModule(pl.LightningModule):
         self._loaders_params = loaders_params
         self._token_indexer = token_indexer
 
-    def forward(self, article, prev_input):
-        return self.summarizer(article, prev_input)
+    def forward(self, article, article_length,
+                prev_input, prev_input_length):
+        return self.summarizer(article, article_length,
+                               prev_input, prev_input_length)
 
     def training_step(self, batch, batch_nb):
-        article, prev_input, gold_summary = batch
-        infered_summary = self.forward(article, prev_input)
+        article_data, prev_input_data, gold_summary = batch
+        article, article_length = article_data
+        prev_input, prev_input_length = prev_input_data
+
+        infered_summary = self.forward(article, article_length,
+                                       prev_input, prev_input_length)
         return {'loss': sequence_nll(infered_summary, gold_summary)}
 
     def validation_step(self, batch, batch_nb):
@@ -75,7 +81,7 @@ def teacher_forcing_training():
     # device, pin_memory = set_device["trainer"]
 
     loaders_params = training_params["loaders"]
-    loaders_params["collate_fn"] = collate_by_packing
+    loaders_params["collate_fn"] = collate_by_padding
     loaders_params["pin_memory"] = trainer_params["gpus"] is not None
 
     special_tokens = {

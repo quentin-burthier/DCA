@@ -64,8 +64,9 @@ class AdditiveAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, query, key):
-        query = self.query_mlp(query).unsqueeze(2)  # [bsz, tgt_len, 1, hsz]
-        key = self.key_mlp(key).unsqueeze(1)  # [bsz, 1, src_len, hsz]
+        query = self.query_layer(query).unsqueeze(2)  # [bsz, tgt_len, 1, hsz]
+        key = self.key_layer(key).unsqueeze(1)  # [bsz, 1, src_len, hsz]
         attn_energies = torch.tanh(query + key) # [bsz, tgt_len, src_len, hsz]
-        attn_energies = self.vT(attn_energies) # [bsz, tgt_len, src_len]
+        attn_energies = self.vT(attn_energies).squeeze(-1)
+        # [bsz, tgt_len, src_len]
         return self.softmax(attn_energies)  # [bsz, tgt_len, src_len]

@@ -1,4 +1,4 @@
-"""Encoders layers."""
+"""Multi-agents encoders layers."""
 
 from typing import Tuple
 
@@ -12,11 +12,10 @@ class BiLSTMLayer(nn.Module):
 
     Args:
         input_size (int): dimension of input sequence elements
-        hidden_size (int): dimension of the LSTM hidden size
+        hidden_size (int)
 
     Input:
-        input_seq (Tensor): batch of articles, split by n_agents paragraphs
-        seq_lenghts (LongTensor): lenghts of the paragraphs
+        input_seq (PackedSequence): batch of articles, split by n_agents paragraphs
 
     Output:
         encoded_seq (Tensor)
@@ -28,9 +27,10 @@ class BiLSTMLayer(nn.Module):
         self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
                                num_layers=1, bidirectional=True)
 
-    def forward(self, input_seq: PackedSequence) -> Tuple[Tuple[torch.Tensor,
-                                                                torch.LongTensor],
-                                                          torch.Tensor]:
+    def forward(
+            self,
+            input_seq: PackedSequence
+    ) -> Tuple[Tuple[torch.Tensor, torch.LongTensor], torch.Tensor]:
 
         encoded_seq, _ = self.bi_lstm(input_seq)
 

@@ -1,18 +1,15 @@
-""" CNN / Daily Mail dataset
-
-From the implementation of
-Fast Abstractive Summarization with Reinforce-Selected Sentence Rewriting
-(Yen-Chun Chen and Mohit Bansal, 2018)
-https://github.com/ChenRocks/fast_abs_rl
-
-Copyright (c) 2018 Yen-Chun Chen
+""" PyTorch datasets.
 """
+from typing import List
 
 import json
 import re
 import os
 from os.path import join
+from itertools import chain
 
+import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
 
@@ -44,10 +41,17 @@ class CnnDmDataset(Dataset):
     def __getitem__(self, index: int):
         with open(join(self._data_path, f"{index}.json")) as f:
             sample = json.loads(f.read())
-        article: list = self.token_indexer(sample["article"])
-        abstract: list = self.token_indexer(sample["abstract"])
+        article: List[str] = sample["article"]
+        abstract: List[str] = sample["abstract"]
+
+        article = torch.tensor(self.preprocess(article), dtype=torch.long)
+        abstract = torch.tensor(self.preprocess(abstract), dtype=torch.long)
 
         return article, abstract
+
+    def preprocess(self, text: List[str]) -> torch.LongTensor:
+        text = chain(*(sentence.split(' ') for sentence in text))
+        return self.token_indexer(text)
 
     def __len__(self) -> int:
         return self._n_data
@@ -64,11 +68,22 @@ class DCADataset(CnnDmDataset):
 
         splitted_article = self.split_article(article)
 
-        return article, abstract[1:], abstract
+        splitted_article = pad_sequence(splitted_article)
+        # [src_len, n_agents]
 
-    def split_article(self, article: list):
-        n = len(article)
-        return [article[:n//3], article[n//3:2*n//3], article[2*n//3:]]
+        return splitted_article, abstract[:-1], abstract
+
+    def split_article(self, article: list) -> List[torch.LongTensor]:
+        """Split the article in n_agents paragraphs.
+
+        Current implementation simply returns paragraphs of equal lengths
+        (+/- 1)
+        """
+        article_len = len(article)
+        split_len = article_len / self.n_agents
+        return [article[round(i*split_len): round((i+1)*split_len)]
+                for i in range(self.n_agents)]
+
 
 
 def count_data(path):
