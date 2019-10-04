@@ -6,7 +6,6 @@ import pytest
 
 import torch
 from torch.nn.utils.rnn import pack_sequence
-# sys.path.append('/home/quentinb/DCA')
 from settings.model import build_multi_agt_encoder
 
 
@@ -36,10 +35,10 @@ def test_encoder(n_agents: int, embedding_dim: int,
         f"{encoded_seq.shape} != {[src_len, bsz, n_agents, hsz]}"
     )
     assert isinstance(state, tuple), f"state is a {type(state)}"
-    assert len(state) == 0, f"state lenght is {len(state)}"
-    assert list(state[0].shape) == [bsz, hsz], (
-        f"Hidden state: {state[0].shape} != {[bsz, hsz]}"
+    assert len(state) == 2, f"state lenght is {len(state)}"
+    assert list(state[0].shape) == [1, bsz, hsz], (
+        f"Hidden state: {state[0].shape} != {[1, bsz, hsz]}"
     )
-    assert list(state[1].shape) == [bsz, hsz], (
-        f"Cell state{state[0].shape} != {[bsz, hsz]}"
+    assert list(state[1].shape) == [1, bsz, hsz], (
+        f"Cell state{state[0].shape} != {[1, bsz, hsz]}"
     )

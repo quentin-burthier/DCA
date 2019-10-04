@@ -11,9 +11,9 @@ from settings.model import build_decoder
 
 
 @pytest.mark.parametrize(
-    "n_agents, embedding_dim, hsz, voc_sz, bsz, src_len, seq_len_range",
+    "n_agents, embedding_dim, hsz, voc_sz, bsz, src_len, prev_len_range",
     [(3, 64, 32, 500, 7, 111, (20, 40))])
-def test_encoder(n_agents: int, embedding_dim: int,
+def test_decoder(n_agents: int, embedding_dim: int,
                  hsz: int, voc_sz: int, bsz: int, src_len: int,
                  prev_len_range: Tuple[int, int]):
     decoder = build_decoder(hidden_size=hsz, embedding_dim=embedding_dim,
