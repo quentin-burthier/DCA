@@ -43,9 +43,11 @@ class MultiAgentsEncoder(nn.Module):
         self.mask_matrix = torch.ones(self.n_agents, self.n_agents, dtype=torch.uint8)
         self.mask_matrix -= torch.eye(self.n_agents, dtype=torch.uint8)
 
-    def forward(self, article: PackedSequence) -> Tuple[Tensor, Tensor]:
+    def forward(self,
+                article: PackedSequence
+                ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
         # Local encoding of each article
-        (prev_layer_enc, seq_lenghts), prev_hs = self.local_layer(article)
+        (prev_layer_enc, seq_lenghts), prev_hs, _ = self.local_layer(article)
         # ([src_len, bsz*n_agents, 2*hsz],
         #  [bsz*n_agents, 2*hsz])
         prev_layer_enc = self.bidir_hs_proj(prev_layer_enc) # [src_len, bsz*n_agents, hsz]
@@ -73,7 +75,8 @@ class MultiAgentsEncoder(nn.Module):
             # Feed the projection to the agents
             next_layer_in = pack_padded_sequence(next_layer_in, seq_lenghts,
                                                  enforce_sorted=False)
-            (prev_layer_enc, _), prev_hs = contextual_layer(next_layer_in)
+            contextual_layer_out = contextual_layer(next_layer_in)
+            (prev_layer_enc, _), prev_hs, cell_state = contextual_layer_out
 
             # Projection of the LSTM directions
             prev_layer_enc = self.bidir_hs_proj(prev_layer_enc) # [src_len, bsz*n_agents, hsz]
@@ -82,9 +85,15 @@ class MultiAgentsEncoder(nn.Module):
         src_len = prev_layer_enc.shape[0]
         prev_layer_enc = prev_layer_enc.view(src_len, bsz, self.n_agents, -1)
         # [src_len, bsz, n_agents, hsz]
-        last_h_of_1st_agt = prev_hs.view(bsz, self.n_agents, -1)[:, 0, :]
-        # [bsz, hsz]
-        return prev_layer_enc, last_h_of_1st_agt
+
+        last_h_of_1st_agt = prev_hs.view(bsz, self.n_agents, -1)
+        last_h_of_1st_agt = last_h_of_1st_agt[:, 0, :].unsqueeze(0)
+        # [1, bsz, hsz]
+        cell_state = cell_state.view(bsz, self.n_agents, -1)
+        cell_state = cell_state[:, 0, :].unsqueeze(0)
+        # [1, bsz, hsz]
+
+        return prev_layer_enc, (last_h_of_1st_agt, cell_state)
 
 
 class MessageProjector(nn.Module):

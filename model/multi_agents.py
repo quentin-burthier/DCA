@@ -16,6 +16,15 @@ class MultiAgentsSummarizer(nn.Module):
         embedding_layer (nn.Embedding):
         multi_agt_encoder (MultiAgentsEncoder):
         decoder (Decoder):
+
+    Inputs:
+        article (Tensor): [description]
+        article_length (Tensor): [description]
+        prev_input (LongTensor): [description]
+        prev_input_length (LongTensor): [description]
+
+    Output:
+        extended_voc_probs (Tensor[tgt_len, bsz, extended_voc_sz])
     """
 
     def __init__(self, embedding_layer: nn.Embedding,
@@ -47,11 +56,11 @@ class MultiAgentsSummarizer(nn.Module):
                                                    prev_input_length,
                                                    enforce_sorted=False)
 
-        vocab_probs, generation_probs, agentwise_attn, agent_attn = self.decoder(
-            prev_input=prev_input,
-            encoded_seq=encoded_seq,
-            init_state=state
-        )
+        decoder_out = self.decoder(prev_input=embedded_prev_input,
+                                   encoded_seq=encoded_seq,
+                                   init_state=state)
+        vocab_probs, generation_probs, agentwise_attn, agent_attn = decoder_out
+
         generation_probs = generation_probs.unsqueeze(-1)
 
         voc_gen_probs = generation_probs * vocab_probs.unsqueeze(-2)

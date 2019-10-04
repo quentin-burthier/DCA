@@ -1,6 +1,6 @@
 """Test the multi-agents encoder."""
 from typing import Tuple
-# import sys
+
 import random
 import pytest
 
@@ -35,6 +35,11 @@ def test_encoder(n_agents: int, embedding_dim: int,
     assert list(encoded_seq.shape) == [src_len, bsz, n_agents, hsz], (
         f"{encoded_seq.shape} != {[src_len, bsz, n_agents, hsz]}"
     )
-    assert list(state.shape) == [bsz, hsz], (
-        f"{state.shape} != {[bsz, hsz]}"
+    assert isinstance(state, tuple), f"state is a {type(state)}"
+    assert len(state) == 0, f"state lenght is {len(state)}"
+    assert list(state[0].shape) == [bsz, hsz], (
+        f"Hidden state: {state[0].shape} != {[bsz, hsz]}"
+    )
+    assert list(state[1].shape) == [bsz, hsz], (
+        f"Cell state{state[0].shape} != {[bsz, hsz]}"
     )

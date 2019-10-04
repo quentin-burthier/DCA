@@ -8,7 +8,7 @@ from model.multi_agents import MultiAgentsSummarizer
 from model.multi_agents_encoder import MultiAgentsEncoder, MessageProjector
 from model.encoder_layers import BiLSTMLayer
 
-from model.decoder import Decoder, Generator
+from model.decoder import Decoder, Generator, VocabPredictor
 from model.decoder_layers import LSTMLayer
 
 from model.attention import AdditiveAttention
@@ -56,11 +56,11 @@ def build_decoder(hidden_size: int, embedding_dim: int, vocab_size: int):
 
     generator = Generator(hidden_size, embedding_dim)
 
-    mlp = nn.Linear(hidden_size, vocab_size)
+    vocab_predictor = VocabPredictor(hidden_size, vocab_size)
 
     word_attention = AdditiveAttention(hidden_size, bias=True)
     agent_attention = AdditiveAttention(hidden_size, bias=True)
 
-    return Decoder(decoder_layer=decoder_layer, mlp=mlp,
+    return Decoder(decoder_layer=decoder_layer, vocab_predictor=vocab_predictor,
                    generator=generator, word_attention=word_attention,
                    agent_attention=agent_attention)

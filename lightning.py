@@ -95,6 +95,7 @@ def teacher_forcing_training():
         embedding_dim=hparams["embedding_dim"],
         special_tokens=special_tokens
     )
+    hparams["vocab_size"] += len(special_tokens)
     dca_summarizer = build_multi_agt_summarizer(**hparams,
                                                 embeddings=embeddings)
 
