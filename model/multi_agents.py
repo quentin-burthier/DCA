@@ -47,7 +47,6 @@ class MultiAgentsSummarizer(nn.Module):
         embedded_article = pack_padded_sequence(embedded_article,
                                                 article_length,
                                                 enforce_sorted=False)
-
         encoded_seq, state = self.multi_agt_encoder(embedded_article)
 
         # Decoding
@@ -55,22 +54,12 @@ class MultiAgentsSummarizer(nn.Module):
         embedded_prev_input = pack_padded_sequence(embedded_prev_input,
                                                    prev_input_length,
                                                    enforce_sorted=False)
-
         decoder_out = self.decoder(prev_input=embedded_prev_input,
                                    encoded_seq=encoded_seq,
                                    init_state=state)
-        vocab_probs, generation_probs, agentwise_attn, agent_attn = decoder_out
+        voc_gen_probs, copy_prob_weighted_attn, agent_attn = decoder_out
 
-        generation_probs = generation_probs.unsqueeze(-1)
-
-        voc_gen_probs = generation_probs * vocab_probs.unsqueeze(-2)
-        # [bsz, tgt_len, n_agents, 1] * [bsz, tgt_len, 1, voc_sz]
-        # -> [bsz, tgt_len, n_agents, voc_sz]
-
-        copy_prob_weighted_attn = (1 - generation_probs) * agentwise_attn
-        # [bsz, tgt_len, n_agents, 1]*[bsz*n_agents, tgt_len, src_len]
-        # -> [bsz, tgt_len, n_agents, src_len]
-
+        # Infer generation and copy probabilities
         agt_extended_voc_probs = torch.cat((
             voc_gen_probs,
             torch.zeros(extended_voc_sz, device=self.device)))
@@ -83,9 +72,7 @@ class MultiAgentsSummarizer(nn.Module):
         )
         # [bsz, tgt_len, n_agents, extended_voc_sz]
 
-        extended_voc_probs = (agent_attn.view(bsz, tgt_len, n_agents, 1)
-                              * agt_extended_voc_probs
-                             ).sum(dim=-2)
+        extended_voc_probs = (agent_attn * agt_extended_voc_probs).sum(dim=-2)
         # ([bsz, tgt_len, n_agents, 1]*[bsz, tgt_len, n_agents, extended_voc_sz]).sum(-2)
         # -> [bsz, tgt_len, n_agents, extended_voc_sz].sum(dim=-2)
         # -> [bsz, tgt_len, extended_voc_sz]

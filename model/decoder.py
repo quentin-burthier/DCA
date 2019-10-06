@@ -12,11 +12,11 @@ class Decoder(nn.Module):
     """Multi-agents decoder.
 
         Args:
-            n_agents (int):
-            decoder (nn.Module):
-            mlp (nn.Module):
-            word_attention ([type]):
-            agent_attention ([type]):
+            decoder_layer (nn.Module):
+            vocab_predictor (VocabPredictor):
+            generator (Generator):
+            word_attention:
+            agent_attention:
 
         Input:
             prev_input (PackedSequence[tgt_len, bsz, emb_dim]):
@@ -26,10 +26,9 @@ class Decoder(nn.Module):
             init_state Tuple(Tensor[bsz, hsz], Tensor[bsz, hsz])
 
         Output:
-            vocab_probs (Tensor[bsz, tgt_len, voc_sz])
-            generation_probs (Tensor[bsz, tgt_len, n_agents])
-            agentwise_attn (Tensor[bsz*n_agents, tgt_len, hsz])
-            agent_attn (Tensor[bsz*tgt_len, n_agents, 1])
+            voc_gen_probs (Tensor[bsz, tgt_len, n_agents, voc_sz])
+            copy_prob (Tensor[bsz, tgt_len, n_agents, src_len])
+            agent_attn (Tensor[bsz, tgt_len, n_agents, 1])
     """
 
     def __init__(self, decoder_layer: nn.Module, vocab_predictor: VocabPredictor,
@@ -90,16 +89,63 @@ class Decoder(nn.Module):
         vocab_probs = self.vocab_predictor(state, global_context)
         # [bsz, tgt_len, voc_sz]
 
+        ## Generation probablities
+        voc_gen_probs, copy_prob = self.compute_generation_probs(
+            state=state,
+            prev_input=prev_input,
+            vocab_probs=vocab_probs,
+            agentwise_context=agentwise_context,
+            agentwise_attn=agentwise_attn,
+            dims=(bsz, tgt_len, n_agents, hsz, src_len)
+        )
+
+        agent_attn = agent_attn.view(bsz, tgt_len, n_agents, 1)
+
+        return voc_gen_probs, copy_prob, agent_attn
+
+    def compute_generation_probs(
+            self,
+            state: Tensor,
+            prev_input: PackedSequence,
+            vocab_probs: Tensor,
+            agentwise_context: Tensor,
+            agentwise_attn: Tensor,
+            dims: tuple
+        ) -> Tuple[Tensor, Tensor]:
+        """Computes the generation and copy probabilities.
+
+        Args:
+            state (Tensor)
+            prev_input (PackedSequence)
+            vocab_probs (Tensor)
+            agentwise_context (Tensor)
+            agentwise_attn (Tensor)
+            dims (tuple)
+
+        Returns:
+            voc_gen_probs (Tensor[bsz, tgt_len, n_agents, voc_sz])
+            copy_prob_weighted_attn (Tensor[bsz, tgt_len, n_agents, src_len])
+        """
+        bsz, tgt_len, n_agents, hsz, src_len = dims
+
         pred_output, _ = pad_packed_sequence(prev_input, batch_first=True)
-        # Pointer-Generator
         generation_probs = self.generator(
             agentwise_context.view(bsz, tgt_len, n_agents, hsz),
             state,
             pred_output
-        )
-        # [bsz, tgt_len, n_agents]
+        ).unsqueeze(-1)
+        # [bsz, tgt_len, n_agents, 1]
 
-        return vocab_probs, generation_probs, agentwise_attn, agent_attn
+        voc_gen_probs = generation_probs * vocab_probs.unsqueeze(-2)
+        # [bsz, tgt_len, n_agents, 1] * [bsz, tgt_len, 1, voc_sz]
+        # -> [bsz, tgt_len, n_agents, voc_sz]
+
+        agentwise_attn = agentwise_attn.view(bsz, n_agents, tgt_len, src_len) \
+                                       .transpose(1, 2)
+        copy_prob_weighted_attn = (1 - generation_probs) * agentwise_attn
+        # [bsz, tgt_len, n_agents, 1]*[bsz, tgt_len, n_agents, src_len]
+        # -> [bsz, tgt_len, n_agents, src_len]
+        return voc_gen_probs, copy_prob_weighted_attn
 
 
 class Generator(nn.Module):

@@ -52,6 +52,8 @@ def build_multi_agt_encoder(n_agents: int, embedding_dim: int, hidden_size: int,
 
 
 def build_decoder(hidden_size: int, embedding_dim: int, vocab_size: int):
+    assert embedding_dim == hidden_size, (
+        f"Different embedding_dim and hidden_size not implemented")
     decoder_layer = LSTMLayer(input_size=hidden_size, hidden_size=hidden_size)
 
     generator = Generator(hidden_size, embedding_dim)
