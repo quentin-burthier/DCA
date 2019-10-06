@@ -11,18 +11,18 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 def collate_by_padding(
-        batch: List[Tuple[Tensor]],
+        batch: List[Tuple[Tensor, Tensor]],
         padding_value: int = 0
-    ) -> Tuple[Tensor, Tensor, Tensor]:
+    ):
     """Collates a batch of sequences.
 
     Args:
-        batch (List[Tuple]): [description]
-        padding_value ([type]): [description]
+        batch (List[Tuple[LongTensor, LongTensor]])
+        padding_value (int)
 
     Returns:
-        articles
-        prev_input
+        articles, articles_len
+        prev_input, prev_inputs_len
         gold_summaries
     """
     batch.sort(key=lambda x: len(x[0]), reverse=True)  # sort by decreasing article

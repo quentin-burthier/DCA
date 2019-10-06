@@ -17,22 +17,14 @@ class CnnDmDataset(Dataset):
     """CNN - Daily Mail Dataset
 
     Args:
-        split (str): [description]
+        split (str): train, val or test
 
     __getitem__:
-        article
-        abstract
+        article (LongTensor)
+        abstract (LongTensor)
     """
 
     def __init__(self, split: str, token_indexer) -> None:
-        """[summary]
-
-        Args:
-            split (str): [description]
-
-        Returns:
-            None: [description]
-        """
         assert split in ['train', 'val', 'test']
         self._data_path = join(os.environ["CNNDM_PATH"], split)
         self._n_data = count_data(self._data_path)

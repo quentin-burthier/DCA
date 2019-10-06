@@ -18,10 +18,10 @@ class MultiAgentsSummarizer(nn.Module):
         decoder (Decoder):
 
     Inputs:
-        article (Tensor): [description]
-        article_length (Tensor): [description]
-        prev_input (LongTensor): [description]
-        prev_input_length (LongTensor): [description]
+        article (Tensor)
+        article_length (Tensor)
+        prev_input (LongTensor)
+        prev_input_length (LongTensor)
 
     Output:
         extended_voc_probs (Tensor[tgt_len, bsz, extended_voc_sz])

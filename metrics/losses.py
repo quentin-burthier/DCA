@@ -7,12 +7,12 @@ def sequence_nll(predicted_probs, gold_summaries, padding_idx: int = 0):
     """Negative Log-Likelihood
 
     Args:
-        predicted_probs (Tensor[bsz, tgt_len, voc_hsz]): [description]
-        gold_summaries ([LongTensor[bsz, tgt_len]): [description]
-        padding_idx ([type]): [description]
+        predicted_probs (Tensor[bsz, tgt_len, voc_hsz])
+        gold_summaries ([LongTensor[bsz, tgt_len])
+        padding_idx ([type])
 
     Returns:
-        [type]: [description]
+        [type]
     """
     log_probs = torch.log(predicted_probs) #  [bsz, tgt_len, voc_hsz]
 

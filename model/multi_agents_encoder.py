@@ -19,7 +19,7 @@ class MultiAgentsEncoder(nn.Module):
         msg_projector (nn.Module):
 
     Input:
-        article (PackedSequence): [description]
+        article (PackedSequence)
 
     Outputs:
         encoded_article (Tensor([src_len, bsz, n_agents, hsz])
